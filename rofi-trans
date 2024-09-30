@@ -1,0 +1,109 @@
+#!/bin/bash
+
+# Function to get the current system locale
+get_system_locale() {
+    if [ -n "$LANG" ]; then
+        echo "$LANG"
+    elif [ -f /etc/locale.conf ]; then
+        grep LANG /etc/locale.conf | cut -d= -f2
+    else
+        echo "en_US.UTF-8"  # Default fallback
+    fi
+}
+
+# Set locale explicitly, using system locale if available
+SYSTEM_LOCALE=$(get_system_locale)
+export LC_ALL="$SYSTEM_LOCALE"
+export LANG="$SYSTEM_LOCALE"
+
+# Ensure required tools are installed
+command -v rofi >/dev/null 2>&1 || { echo "rofi is required but not installed. Use 'sudo pacman -S rofi' to get it. Aborting."; exit 1; }
+command -v trans >/dev/null 2>&1 || { echo "trans (from translate-shell) is required but not installed. Use 'sudo pacman -S translate-shell to get it. Aborting."; exit 1; }
+command -v xclip >/dev/null 2>&1 || { echo "xclip is required but not installed. Use 'sudo pacman -S xclip' to get it. Aborting."; exit 1; }
+
+# File to store the last used language
+LAST_LANG_FILE="$HOME/.last_translation_lang"
+# File to store translation history
+HISTORY_FILE="$HOME/.cache/rofi-trans_history"
+# File to store language history
+LANG_HISTORY_FILE="$HOME/.cache/rofi-trans_lang_history"
+
+# Ensure history files exist
+touch "$HISTORY_FILE"
+touch "$LANG_HISTORY_FILE"
+
+# Get the last used language, default to English if not set
+if [ -f "$LAST_LANG_FILE" ]; then
+    LAST_LANG=$(cat "$LAST_LANG_FILE")
+else
+    LAST_LANG="en"
+fi
+
+# Function to add a language to history
+add_lang_to_history() {
+    echo "$1" >> "$LANG_HISTORY_FILE"
+    sort -u "$LANG_HISTORY_FILE" -o "$LANG_HISTORY_FILE"
+}
+
+# Function to add a translation to history
+add_to_history() {
+    echo "$1" >> "$HISTORY_FILE"
+    tail -n 30 "$HISTORY_FILE" > "$HISTORY_FILE.tmp" && mv "$HISTORY_FILE.tmp" "$HISTORY_FILE"
+}
+
+# Function to perform translation
+perform_translation() {
+    local TEXT="$1"
+    # Get target language
+    TARGET_LANG=$(cat "$LANG_HISTORY_FILE" | sed '1inew  ' | rofi -dmenu -i -p "  or  ")
+
+    if [ "$TARGET_LANG" = "new  " ]; then
+        TARGET_LANG=$(rofi -dmenu -p " ?")
+    fi
+
+    [ -z "$TARGET_LANG" ] && exit 1
+
+    # Save the used language
+    echo "$TARGET_LANG" > "$LAST_LANG_FILE"
+    add_lang_to_history "$TARGET_LANG"
+
+    # Get detailed translation
+    TRANSLATION_DETAILS=$(trans -no-ansi -show-original n -show-languages n -show-prompt-message n -show-alternatives -brief ":$TARGET_LANG" "$TEXT")
+
+    # Show translation details in rofi and get the selected line
+    SELECTED_LINE=$(echo -e "$TRANSLATION_DETAILS" | rofi -dmenu -i -markup-rows -p "   (press ↵ to  ):")
+
+    if [ -n "$SELECTED_LINE" ]; then
+        # Remove any leading/trailing whitespace and special characters
+        CLEANED_LINE=$(echo "$SELECTED_LINE" | sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/^[^[:alnum:]]*//g' -e 's/[^[:alnum:]]*$//g')
+        echo -n "$CLEANED_LINE" | xclip -selection clipboard | notify-send -t 4500 "$CLEANED_LINE" "Copied to 📋"
+        ## echo "↩📋: $CLEANED_LINE" ### tty output showing what was copied to the clipboard (not needed unless debugging)
+        # notify-send -t 2500 "$CLEANED_LINE" "Copied to 📋" 
+        # Add to history
+        add_to_history "$TEXT -> $CLEANED_LINE"
+    fi
+}
+
+# Show history and option for new translation
+SELECTED=$(cat "$HISTORY_FILE" | tac | sed '1inew  ' | rofi -dmenu -i -p "  or   ?")
+
+# Handle selection
+if [ "$SELECTED" = "new  " ]; then
+    # Get text to translate
+    TEXT=$(rofi -dmenu -p " ")
+    [ -z "$TEXT" ] && exit 1
+    perform_translation "$TEXT"
+else
+    # Check if the selection is from history (contains "->", using ">" instead since two characters fail)
+    if echo "$SELECTED" | grep -q ">"; then
+        # Extract only the translated part (after "->")
+        TRANSLATION=$(echo "$SELECTED" | cut -d '>' -f2- | sed 's/^ //')
+        # Copy to clipboard
+        echo -n "$TRANSLATION" | xclip -selection clipboard | notify-send -t 4500 "$TRANSLATION" "Copied to 📋"
+        ### echo "↩📋: $TRANSLATION" ### tty output showing what was copied to the clipboard (not needed unless debugging)
+        # notify-send -t 2500 "$TRANSLATION" "Copied to 📋" 
+    else
+        # If new text was entered, perform translation
+        perform_translation "$SELECTED"
+    fi
+fi
