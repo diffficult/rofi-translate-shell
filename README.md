@@ -1,31 +1,50 @@
-# rofi-translate-shell
-Use rofi to quickly translate a word or phrase to clipboard
+# 🌎 rofi-translate-shell
 
-## Required:
+Quick translation tool that uses rofi to translate words or phrases directly to your clipboard! 
 
-- `rofi`, 
+## ✨ Features
 
-- `translate-shell` of course. Use your favourite package manager to get it,
+- 🔍 Fast word/phrase translation
+- 📋 Direct clipboard integration
+- 💾 Caches recent queries and languages
+- 🎯 Simple and intuitive interface
 
-- `xclip` to get translated result into clipboard when pressing enter,
+## 📦 Requirements
 
-- `nerd fonts` or `font-awesome` to get icons properly displayed.
+- `rofi` - For the clean interface
+- `translate-shell` - The translation engine
+- `xclip` - For clipboard management
+- `nerd fonts` or `font-awesome` - For proper icon display
 
-### Install: 
+## 🚀 Installation
 
-Clone repo with 
+Clone the repository:
 
+```bash
+git clone https://www.github.com/diffficult/rofi-translate-shell
 ```
-git clone https://www.github.com/diffficult/rofi-translate-shell 
-``` 
 
-### Usage:
+## 🎮 Usage
 
-Call the script and `rofi` will prompt you for the word or phrase you want to translate. Once you enter that, it will ask you for the language code (`en`, `es`, `ja`, `ru`, etc) you want to translate that to. Then it will display the translation, meaning, phonetic and similar or synonyms to your query. If you press **Enter ↵** it will put that result in your clipboard and push a notification confirming that.
+1. 🏃‍♂️ Run the script
+2. ✍️ Type your word/phrase when rofi prompts
+3. 🌍 Enter the target language code (`en`, `es`, `ja`, `ru`, etc.)
+4. 📝 View your translation with:
+   - Translation
+   - Meaning
+   - Phonetic pronunciation
+   - Similar words/synonyms
+5. ↵ Press **Enter** to copy the result to clipboard
 
-The script will use the `.cache` directory to store most recent queries, last used language codes and also the latest results, in which case you can select instead of typing again and translate the same phrase to a different language. 
+## 💡 Pro Tips
 
-I suggest you clone the repo wherever you like and link the script to your `.local/bin` directory or wherever you keep your personal scripts. 
+- The script uses `.cache` to store:
+  - 🕒 Recent queries
+  - 🗣️ Last used language codes
+  - ✨ Latest results
+- You can quickly reuse previous translations from the cache
+- 🔧 Pro tip: Link the script to your `.local/bin` directory for easy access!
 
-----
+---
+
 Π
